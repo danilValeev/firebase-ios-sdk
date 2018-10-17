@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#import <objc/NSObject.h>
+#import <Foundation/Foundation.h>
 #import "FIRTransaction.h"
 
 #include <utility>
@@ -119,16 +121,20 @@ NS_ASSUME_NONNULL_BEGIN
                     HARD_ASSERT(documents.count == 1,
                                 "Mismatch in docs returned from document lookup.");
                     FSTMaybeDocument *internalDoc = documents.firstObject;
-                    if ([internalDoc isKindOfClass:[FSTDeletedDocument class]]) {
+                    if ([internalDoc isKindOfClass:[FSTMaybeDocument  class]]) {
+                      FIRDocumentSnapshot *doc =
+                          [FIRDocumentSnapshot snapshotWithFirestore:self.firestore
+                                                         documentKey:internalDoc.key
+                                                            document:(FSTDocument *)internalDoc
+                                                           fromCache:NO];
+                      completion(doc, nil);
+                    } else if ([internalDoc isKindOfClass:[FSTDeletedDocument class]]) {
                       completion(nil, nil);
                       return;
+                    } else {
+                      HARD_FAIL(@"BatchGetDocumentsRequest returned unexpected document type: %s", NSStringFromClass([internalDoc class]);
                     }
-                    FIRDocumentSnapshot *doc =
-                        [FIRDocumentSnapshot snapshotWithFirestore:self.firestore
-                                                       documentKey:internalDoc.key
-                                                          document:(FSTDocument *)internalDoc
-                                                         fromCache:NO];
-                    completion(doc, nil);
+
                   }];
 }
 

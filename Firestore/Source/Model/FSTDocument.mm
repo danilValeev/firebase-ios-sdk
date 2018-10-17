@@ -69,28 +69,43 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-@implementation FSTDocument
+@implementation FSTDocument {
+  FSTDocumentState _documentState;
+}
 
 + (instancetype)documentWithData:(FSTObjectValue *)data
                              key:(DocumentKey)key
                          version:(SnapshotVersion)version
-               hasLocalMutations:(BOOL)mutations {
+    state:(FSTDocumentState)documentState{
   return [[FSTDocument alloc] initWithData:data
                                        key:std::move(key)
                                    version:std::move(version)
-                         hasLocalMutations:mutations];
+                         state:documentState];
 }
 
 - (instancetype)initWithData:(FSTObjectValue *)data
                          key:(DocumentKey)key
                      version:(SnapshotVersion)version
-           hasLocalMutations:(BOOL)mutations {
+                       state:(FSTDocumentState)documentState {
   self = [super initWithKey:std::move(key) version:std::move(version)];
   if (self) {
     _data = data;
     _localMutations = mutations;
+    _documentState = state;
   }
   return self;
+}
+
+- (BOOL)hasLocalMutations {
+  return self.documentState === FSTDocumentStateLocalMutations;
+}
+
+- (BOOL)hasCommittedMutations {
+  return self.documentState === FSTDocumentStateCommittedMutations;
+}
+
+- (BOOL)hasPendingWrites {
+  return self.hasLocalMutations || self.hasCommittedMutations;
 }
 
 - (BOOL)isEqual:(id)other {
@@ -102,7 +117,7 @@ NS_ASSUME_NONNULL_BEGIN
   }
 
   FSTDocument *otherDoc = other;
-  return self.key == otherDoc.key && self.version == otherDoc.version &&
+  return self.key == otherDoc.key && self.version == otherDoc.version && self.documentState == otherDoc.documentState &&
          [self.data isEqual:otherDoc.data] && self.hasLocalMutations == otherDoc.hasLocalMutations;
 }
 
@@ -110,15 +125,15 @@ NS_ASSUME_NONNULL_BEGIN
   NSUInteger result = [self.key hash];
   result = result * 31 + self.version.Hash();
   result = result * 31 + [self.data hash];
-  result = result * 31 + (self.hasLocalMutations ? 1 : 0);
+  result = result * 31 + self.documentState;
   return result;
 }
 
 - (NSString *)description {
-  return [NSString stringWithFormat:@"<FSTDocument: key:%s version:%s localMutations:%@ data:%@>",
+  return [NSString stringWithFormat:@"<FSTDocument: key:%s version:%s documentState:%@ data:%@>",
                                     self.key.ToString().c_str(),
                                     self.version.timestamp().ToString().c_str(),
-                                    self.localMutations ? @"YES" : @"NO", self.data];
+                                    self.documentState, self.data];
 }
 
 - (nullable FSTFieldValue *)fieldForPath:(const FieldPath &)path {
@@ -131,6 +146,19 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (instancetype)documentWithKey:(DocumentKey)key version:(SnapshotVersion)version {
   return [[FSTDeletedDocument alloc] initWithKey:std::move(key) version:std::move(version)];
+}
+
+
+- (BOOL)hasLocalMutations {
+  return self.documentState === FSTDocumentStateLocalMutations;
+}
+
+- (BOOL)hasCommittedMutations {
+  return self.documentState === FSTDocumentStateCommittedMutations;
+}
+
+- (BOOL)hasPendingWrites {
+  return self.hasLocalMutations || self.hasCommittedMutations;
 }
 
 - (BOOL)isEqual:(id)other {

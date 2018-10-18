@@ -85,7 +85,7 @@ using firebase::firestore::model::TargetId;
       return [self decodedDocument:proto.document withCommittedMutations:proto.hasCommittedMutations];
 
     case FSTPBMaybeDocument_DocumentType_OneOfCase_NoDocument:
-      return [self decodedDeletedDocument:proto.noDocuments];
+      return [self decodedDeletedDocument:proto.noDocument withCommittedMutations:proto.hasCommittedMutations];
 
     case FSTPBMaybeDocument_DocumentType_OneOfCase_UnknownDocument:
       return [self decodedUnknownDocument:proto.unknownDocument];
@@ -118,7 +118,7 @@ using firebase::firestore::model::TargetId;
   FSTObjectValue *data = [remoteSerializer decodedFields:document.fields];
   DocumentKey key = [remoteSerializer decodedDocumentKey:document.name];
   SnapshotVersion version = [remoteSerializer decodedVersion:document.updateTime];
-  return [FSTDocument documentWithData:data key:key version:version hasLocalMutations:NO];
+  return [FSTDocument documentWithData:data key:key version:version state:committedMutations?FSTDocumentStateCommittedMutations:FSTDocumentStateSynced];
 }
 
 /** Encodes a NoDocument value to the equivalent proto. */
@@ -132,12 +132,12 @@ using firebase::firestore::model::TargetId;
 }
 
 /** Decodes a NoDocument proto to the equivalent model. */
-- (FSTDeletedDocument *)decodedDeletedDocument:(FSTPBNoDocument *)proto {
+- (FSTDeletedDocument *)decodedDeletedDocument:(FSTPBNoDocument *)proto  withCommittedMutations:(BOOL)committedMutations {
   FSTSerializerBeta *remoteSerializer = self.remoteSerializer;
 
   DocumentKey key = [remoteSerializer decodedDocumentKey:proto.name];
   SnapshotVersion version = [remoteSerializer decodedVersion:proto.readTime];
-  return [FSTDeletedDocument documentWithKey:key version:version];
+  return [FSTDeletedDocument documentWithKey:key version:version hasCommittedMutations:committedMutations];
 }
 
 /** Encodes an UnknownDocument value to the equivalent proto. */
@@ -146,7 +146,7 @@ using firebase::firestore::model::TargetId;
 
   FSTPBUnknownDocument *proto = [FSTPBUnknownDocument message];
   proto.name = [remoteSerializer encodedDocumentKey:document.key];
-  proto.readTime = [remoteSerializer encodedVersion:document.version];
+  proto.version = [remoteSerializer encodedVersion:document.version];
   return proto;
 }
 
@@ -155,7 +155,7 @@ using firebase::firestore::model::TargetId;
   FSTSerializerBeta *remoteSerializer = self.remoteSerializer;
 
   DocumentKey key = [remoteSerializer decodedDocumentKey:proto.name];
-  SnapshotVersion version = [remoteSerializer decodedVersion:proto.readTime];
+  SnapshotVersion version = [remoteSerializer decodedVersion:proto.version];
   return [FSTUnknownDocument documentWithKey:key version:version];
 }
 

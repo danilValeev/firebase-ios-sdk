@@ -92,7 +92,7 @@ NS_ASSUME_NONNULL_BEGIN
     // when writing.
     docVersion = SnapshotVersion::None();
   } else {
-    HARD_FAIL(@"Unexpected document type in transaction: %s", NSStringFromClass([internalDoc class]);
+    HARD_FAIL("Unexpected document type in transaction: %s", NSStringFromClass([doc class]));
   }
 
   if (_readVersions.find(doc.key) == _readVersions.end()) {

@@ -130,11 +130,10 @@ NS_ASSUME_NONNULL_BEGIN
                       completion(doc, nil);
                     } else if ([internalDoc isKindOfClass:[FSTDeletedDocument class]]) {
                       completion(nil, nil);
-                      return;
                     } else {
-                      HARD_FAIL(@"BatchGetDocumentsRequest returned unexpected document type: %s", NSStringFromClass([internalDoc class]);
+                      HARD_FAIL("BatchGetDocumentsRequest returned unexpected document type: %s",
+                          NSStringFromClass([internalDoc class]));
                     }
-
                   }];
 }
 

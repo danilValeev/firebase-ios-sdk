@@ -428,7 +428,8 @@ NS_ASSUME_NONNULL_BEGIN
         // until it is resolved, essentially exposing inconsistency between queries.
         FSTDocumentKey *key = [FSTDocumentKey keyWithPath:query.path];
         [self
-            removeDocument:[FSTDeletedDocument documentWithKey:key version:SnapshotVersion::None()]
+            removeDocument:[FSTDeletedDocument
+           documentWithKey:key version:SnapshotVersion::None() hasCommittedMutations:NO]
                    withKey:key
                 fromTarget:targetID];
       } else {
@@ -575,7 +576,7 @@ NS_ASSUME_NONNULL_BEGIN
         FSTDocumentKey *key = [FSTDocumentKey keyWithPath:queryData.query.path];
         if (_pendingDocumentUpdates.find(key) == _pendingDocumentUpdates.end() &&
             ![self containsDocument:key inTarget:targetID]) {
-          [self removeDocument:[FSTDeletedDocument documentWithKey:key version:snapshotVersion]
+          [self removeDocument:[FSTDeletedDocument documentWithKey:key version:snapshotVersion hasCommittedMutations:NO]
                        withKey:key
                     fromTarget:targetID];
         }

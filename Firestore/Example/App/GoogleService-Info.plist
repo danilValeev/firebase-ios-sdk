@@ -1,28 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>
-	<key>API_KEY</key>
-	<string>correct_api_key</string>
-	<key>TRACKING_ID</key>
-	<string>correct_tracking_id</string>
-	<key>CLIENT_ID</key>
-	<string>correct_client_id</string>
-	<key>REVERSED_CLIENT_ID</key>
-	<string>correct_reversed_client_id</string>
-	<key>GOOGLE_APP_ID</key>
-	<string>1:123:ios:123abc</string>
-	<key>GCM_SENDER_ID</key>
-	<string>correct_gcm_sender_id</string>
-	<key>PLIST_VERSION</key>
-	<string>1</string>
-	<key>BUNDLE_ID</key>
-	<string>com.google.FirebaseSDKTests</string>
-	<key>PROJECT_ID</key>
-	<string>abc-xyz-123</string>
-	<key>DATABASE_URL</key>
-	<string>https://abc-xyz-123.firebaseio.com</string>
-	<key>STORAGE_BUCKET</key>
-	<string>project-id-123.storage.firebase.com</string>
-</dict>
+	<dict>
+		<key>AD_UNIT_ID_FOR_BANNER_TEST</key>
+		<string>ca-app-pub-3940256099942544/2934735716</string>
+		<key>AD_UNIT_ID_FOR_INTERSTITIAL_TEST</key>
+		<string>ca-app-pub-3940256099942544/4411468910</string>
+		<key>CLIENT_ID</key>
+		<string>641078651719-hbl4mkn5i7gdoos86n68dgdr6i6vl3te.apps.googleusercontent.com</string>
+		<key>REVERSED_CLIENT_ID</key>
+		<string>com.googleusercontent.apps.641078651719-hbl4mkn5i7gdoos86n68dgdr6i6vl3te</string>
+		<key>API_KEY</key>
+		<string>AIzaSyD9dysLp3V-TCdHGDxluxSortAGZwD46SA</string>
+		<key>GCM_SENDER_ID</key>
+		<string>641078651719</string>
+		<key>PLIST_VERSION</key>
+		<string>1</string>
+		<key>BUNDLE_ID</key>
+		<string>fgdhjkl</string>
+		<key>PROJECT_ID</key>
+		<string>sessiontickets</string>
+		<key>STORAGE_BUCKET</key>
+		<string>sessiontickets.appspot.com</string>
+		<key>IS_ADS_ENABLED</key>
+		<true></true>
+		<key>IS_ANALYTICS_ENABLED</key>
+		<false></false>
+		<key>IS_APPINVITE_ENABLED</key>
+		<false></false>
+		<key>IS_GCM_ENABLED</key>
+		<true></true>
+		<key>IS_SIGNIN_ENABLED</key>
+		<true></true>
+		<key>GOOGLE_APP_ID</key>
+		<string>1:641078651719:ios:f842d96cdd3975aa</string>
+		<key>DATABASE_URL</key>
+		<string>https://sessiontickets.firebaseio.com</string>
+	</dict>
 </plist>

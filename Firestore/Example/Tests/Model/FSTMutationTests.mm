@@ -57,31 +57,31 @@ using firebase::firestore::model::TransformOperation;
 
 - (void)testAppliesSetsToDocuments {
   NSDictionary *docData = @{@"foo" : @"foo-value", @"baz" : @"baz-value"};
-  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, NO);
+  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, FSTDocumentStateSynced);
 
   FSTMutation *set = FSTTestSetMutation(@"collection/key", @{@"bar" : @"bar-value"});
   FSTMaybeDocument *setDoc =
       [set applyToLocalDocument:baseDoc baseDocument:baseDoc localWriteTime:_timestamp];
 
   NSDictionary *expectedData = @{@"bar" : @"bar-value"};
-  XCTAssertEqualObjects(setDoc, FSTTestDoc("collection/key", 0, expectedData, YES));
+  XCTAssertEqualObjects(setDoc, FSTTestDoc("collection/key", 0, expectedData, FSTDocumentStateLocalMutations));
 }
 
 - (void)testAppliesPatchesToDocuments {
   NSDictionary *docData = @{@"foo" : @{@"bar" : @"bar-value"}, @"baz" : @"baz-value"};
-  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, NO);
+  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, FSTDocumentStateSynced);
 
   FSTMutation *patch = FSTTestPatchMutation("collection/key", @{@"foo.bar" : @"new-bar-value"}, {});
   FSTMaybeDocument *patchedDoc =
       [patch applyToLocalDocument:baseDoc baseDocument:baseDoc localWriteTime:_timestamp];
 
   NSDictionary *expectedData = @{@"foo" : @{@"bar" : @"new-bar-value"}, @"baz" : @"baz-value"};
-  XCTAssertEqualObjects(patchedDoc, FSTTestDoc("collection/key", 0, expectedData, YES));
+  XCTAssertEqualObjects(patchedDoc, FSTTestDoc("collection/key", 0, expectedData, FSTDocumentStateLocalMutations));
 }
 
 - (void)testDeletesValuesFromTheFieldMask {
   NSDictionary *docData = @{@"foo" : @{@"bar" : @"bar-value", @"baz" : @"baz-value"}};
-  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, NO);
+  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, FSTDocumentStateSynced);
 
   DocumentKey key = testutil::Key("collection/key");
   FSTMutation *patch = [[FSTPatchMutation alloc] initWithKey:key
@@ -92,23 +92,23 @@ using firebase::firestore::model::TransformOperation;
       [patch applyToLocalDocument:baseDoc baseDocument:baseDoc localWriteTime:_timestamp];
 
   NSDictionary *expectedData = @{@"foo" : @{@"baz" : @"baz-value"}};
-  XCTAssertEqualObjects(patchedDoc, FSTTestDoc("collection/key", 0, expectedData, YES));
+  XCTAssertEqualObjects(patchedDoc, FSTTestDoc("collection/key", 0, expectedData, FSTDocumentStateLocalMutations));
 }
 
 - (void)testPatchesPrimitiveValue {
   NSDictionary *docData = @{@"foo" : @"foo-value", @"baz" : @"baz-value"};
-  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, NO);
+  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, FSTDocumentStateSynced);
 
   FSTMutation *patch = FSTTestPatchMutation("collection/key", @{@"foo.bar" : @"new-bar-value"}, {});
   FSTMaybeDocument *patchedDoc =
       [patch applyToLocalDocument:baseDoc baseDocument:baseDoc localWriteTime:_timestamp];
 
   NSDictionary *expectedData = @{@"foo" : @{@"bar" : @"new-bar-value"}, @"baz" : @"baz-value"};
-  XCTAssertEqualObjects(patchedDoc, FSTTestDoc("collection/key", 0, expectedData, YES));
+  XCTAssertEqualObjects(patchedDoc, FSTTestDoc("collection/key", 0, expectedData, FSTDocumentStateLocalMutations));
 }
 
 - (void)testPatchingDeletedDocumentsDoesNothing {
-  FSTMaybeDocument *baseDoc = FSTTestDeletedDoc("collection/key", 0);
+  FSTMaybeDocument *baseDoc = FSTTestDeletedDoc("collection/key", 0, NO);
   FSTMutation *patch = FSTTestPatchMutation("collection/key", @{@"foo" : @"bar"}, {});
   FSTMaybeDocument *patchedDoc =
       [patch applyToLocalDocument:baseDoc baseDocument:baseDoc localWriteTime:_timestamp];
@@ -117,7 +117,7 @@ using firebase::firestore::model::TransformOperation;
 
 - (void)testAppliesLocalServerTimestampTransformToDocuments {
   NSDictionary *docData = @{@"foo" : @{@"bar" : @"bar-value"}, @"baz" : @"baz-value"};
-  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, NO);
+  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, FSTDocumentStateSynced);
 
   FSTMutation *transform = FSTTestTransformMutation(
       @"collection/key", @{@"foo.bar" : [FIRFieldValue fieldValueForServerTimestamp]});
@@ -137,7 +137,7 @@ using firebase::firestore::model::TransformOperation;
   FSTDocument *expectedDoc = [FSTDocument documentWithData:expectedData
                                                        key:FSTTestDocKey(@"collection/key")
                                                    version:testutil::Version(0)
-                                         hasLocalMutations:YES];
+                                         state:FSTDocumentStateLocalMutations];
 
   XCTAssertEqualObjects(transformedDoc, expectedDoc);
 }
@@ -293,7 +293,7 @@ using firebase::firestore::model::TransformOperation;
 - (void)transformBaseDoc:(NSDictionary<NSString *, id> *)baseData
                     with:(NSDictionary<NSString *, id> *)transformData
                expecting:(NSDictionary<NSString *, id> *)expectedData {
-  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, baseData, NO);
+  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, baseData, FSTDocumentStateSynced);
 
   FSTMutation *transform = FSTTestTransformMutation(@"collection/key", transformData);
 
@@ -303,14 +303,14 @@ using firebase::firestore::model::TransformOperation;
   FSTDocument *expectedDoc = [FSTDocument documentWithData:FSTTestObjectValue(expectedData)
                                                        key:FSTTestDocKey(@"collection/key")
                                                    version:testutil::Version(0)
-                                         hasLocalMutations:YES];
+                                         state:FSTDocumentStateLocalMutations];
 
   XCTAssertEqualObjects(transformedDoc, expectedDoc);
 }
 
 - (void)testAppliesServerAckedServerTimestampTransformToDocuments {
   NSDictionary *docData = @{@"foo" : @{@"bar" : @"bar-value"}, @"baz" : @"baz-value"};
-  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, NO);
+  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, FSTDocumentStateSynced);
 
   FSTMutation *transform = FSTTestTransformMutation(
       @"collection/key", @{@"foo.bar" : [FIRFieldValue fieldValueForServerTimestamp]});
@@ -323,12 +323,12 @@ using firebase::firestore::model::TransformOperation;
       [transform applyToRemoteDocument:baseDoc mutationResult:mutationResult];
 
   NSDictionary *expectedData = @{@"foo" : @{@"bar" : _timestamp.dateValue}, @"baz" : @"baz-value"};
-  XCTAssertEqualObjects(transformedDoc, FSTTestDoc("collection/key", 0, expectedData, NO));
+  XCTAssertEqualObjects(transformedDoc, FSTTestDoc("collection/key", 0, expectedData, FSTDocumentStateSynced));
 }
 
 - (void)testAppliesServerAckedArrayTransformsToDocuments {
   NSDictionary *docData = @{@"array_1" : @[ @1, @2 ], @"array_2" : @[ @"a", @"b" ]};
-  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, NO);
+  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, FSTDocumentStateSynced);
 
   FSTMutation *transform = FSTTestTransformMutation(@"collection/key", @{
     @"array_1" : [FIRFieldValue fieldValueForArrayUnion:@[ @2, @3 ]],
@@ -344,22 +344,22 @@ using firebase::firestore::model::TransformOperation;
       [transform applyToRemoteDocument:baseDoc mutationResult:mutationResult];
 
   NSDictionary *expectedData = @{@"array_1" : @[ @1, @2, @3 ], @"array_2" : @[ @"b" ]};
-  XCTAssertEqualObjects(transformedDoc, FSTTestDoc("collection/key", 0, expectedData, NO));
+  XCTAssertEqualObjects(transformedDoc, FSTTestDoc("collection/key", 0, expectedData, FSTDocumentStateSynced));
 }
 
 - (void)testDeleteDeletes {
   NSDictionary *docData = @{@"foo" : @"bar"};
-  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, NO);
+  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, FSTDocumentStateSynced);
 
   FSTMutation *mutation = FSTTestDeleteMutation(@"collection/key");
   FSTMaybeDocument *result =
       [mutation applyToLocalDocument:baseDoc baseDocument:baseDoc localWriteTime:_timestamp];
-  XCTAssertEqualObjects(result, FSTTestDeletedDoc("collection/key", 0));
+  XCTAssertEqualObjects(result, FSTTestDeletedDoc("collection/key", 0, NO));
 }
 
 - (void)testSetWithMutationResult {
   NSDictionary *docData = @{@"foo" : @"bar"};
-  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, NO);
+  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, FSTDocumentStateSynced);
 
   FSTMutation *set = FSTTestSetMutation(@"collection/key", @{@"foo" : @"new-bar"});
   FSTMutationResult *mutationResult =
@@ -367,12 +367,12 @@ using firebase::firestore::model::TransformOperation;
   FSTMaybeDocument *setDoc = [set applyToRemoteDocument:baseDoc mutationResult:mutationResult];
 
   NSDictionary *expectedData = @{@"foo" : @"new-bar"};
-  XCTAssertEqualObjects(setDoc, FSTTestDoc("collection/key", 0, expectedData, NO));
+  XCTAssertEqualObjects(setDoc, FSTTestDoc("collection/key", 0, expectedData, FSTDocumentStateSynced));
 }
 
 - (void)testPatchWithMutationResult {
   NSDictionary *docData = @{@"foo" : @"bar"};
-  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, NO);
+  FSTDocument *baseDoc = FSTTestDoc("collection/key", 0, docData, FSTDocumentStateSynced);
 
   FSTMutation *patch = FSTTestPatchMutation("collection/key", @{@"foo" : @"new-bar"}, {});
   FSTMutationResult *mutationResult =
@@ -381,7 +381,7 @@ using firebase::firestore::model::TransformOperation;
       [patch applyToRemoteDocument:baseDoc mutationResult:mutationResult];
 
   NSDictionary *expectedData = @{@"foo" : @"new-bar"};
-  XCTAssertEqualObjects(patchedDoc, FSTTestDoc("collection/key", 0, expectedData, NO));
+  XCTAssertEqualObjects(patchedDoc, FSTTestDoc("collection/key", 0, expectedData, FSTDocumentStateSynced));
 }
 
 #define ASSERT_VERSION_TRANSITION(mutation, base, expected)                                    \
@@ -397,11 +397,11 @@ using firebase::firestore::model::TransformOperation;
  * Tests the transition table documented in FSTMutation.h.
  */
 - (void)testTransitions {
-  FSTDocument *docV0 = FSTTestDoc("collection/key", 0, @{}, NO);
-  FSTDeletedDocument *deletedV0 = FSTTestDeletedDoc("collection/key", 0);
+  FSTDocument *docV0 = FSTTestDoc("collection/key", 0, @{}, FSTDocumentStateSynced);
+  FSTDeletedDocument *deletedV0 = FSTTestDeletedDoc("collection/key", 0, NO);
 
-  FSTDocument *docV3 = FSTTestDoc("collection/key", 3, @{}, NO);
-  FSTDeletedDocument *deletedV3 = FSTTestDeletedDoc("collection/key", 3);
+  FSTDocument *docV3 = FSTTestDoc("collection/key", 3, @{}, FSTDocumentStateSynced);
+  FSTDeletedDocument *deletedV3 = FSTTestDeletedDoc("collection/key", 3, NO);
 
   FSTMutation *setMutation = FSTTestSetMutation(@"collection/key", @{});
   FSTMutation *patchMutation = FSTTestPatchMutation("collection/key", {}, {});

@@ -55,7 +55,7 @@ typedef NS_ENUM(NSInteger, FSTDocumentState) {
 + (instancetype)documentWithData:(FSTObjectValue *)data
                              key:(firebase::firestore::model::DocumentKey)key
                          version:(firebase::firestore::model::SnapshotVersion)version
-    state:(FSTDocumentState)documentState;
+    state:(FSTDocumentState)state;
 
 - (nullable FSTFieldValue *)fieldForPath:(const firebase::firestore::model::FieldPath &)path;
 - (BOOL)hasLocalMutations;
@@ -67,7 +67,11 @@ typedef NS_ENUM(NSInteger, FSTDocumentState) {
 
 @interface FSTDeletedDocument : FSTMaybeDocument
 + (instancetype)documentWithKey:(firebase::firestore::model::DocumentKey)key
-                        version:(firebase::firestore::model::SnapshotVersion)version;
+                        version:(firebase::firestore::model::SnapshotVersion)version
+          hasCommittedMutations:(BOOL)committedMutations;
+
+- (BOOL)hasCommittedMutations;
+
 @end
 
 

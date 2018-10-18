@@ -19,6 +19,7 @@
 #include <utility>
 
 #import "Firestore/Source/Model/FSTFieldValue.h"
+#import "Firestore/Source/Util/FSTClasses.h"
 
 #include "Firestore/core/src/firebase/firestore/model/document_key.h"
 #include "Firestore/core/src/firebase/firestore/model/field_path.h"
@@ -43,15 +44,21 @@ NS_ASSUME_NONNULL_BEGIN
 @implementation FSTMaybeDocument {
   DocumentKey _key;
   SnapshotVersion _version;
+  FSTDocumentState _documentState;
 }
 
-- (instancetype)initWithKey:(DocumentKey)key version:(SnapshotVersion)version {
+- (instancetype)initWithKey:(DocumentKey)key version:(SnapshotVersion)version state:(FSTDocumentState)documentState {
   self = [super init];
   if (self) {
     _key = std::move(key);
     _version = std::move(version);
+    _documentState = documentState;
   }
   return self;
+}
+
+- (BOOL)hasPendingWrites {
+  @throw FSTAbstractMethodException();  // NOLINT
 }
 
 - (id)copyWithZone:(NSZone *_Nullable)zone {
@@ -76,32 +83,30 @@ NS_ASSUME_NONNULL_BEGIN
 + (instancetype)documentWithData:(FSTObjectValue *)data
                              key:(DocumentKey)key
                          version:(SnapshotVersion)version
-    state:(FSTDocumentState)documentState{
+    state:(FSTDocumentState)state{
   return [[FSTDocument alloc] initWithData:data
                                        key:std::move(key)
-                                   version:std::move(version)
-                         state:documentState];
+                                   version:std::move(version) state:state];
 }
 
 - (instancetype)initWithData:(FSTObjectValue *)data
                          key:(DocumentKey)key
                      version:(SnapshotVersion)version
-                       state:(FSTDocumentState)documentState {
+                       state:(FSTDocumentState)state {
   self = [super initWithKey:std::move(key) version:std::move(version)];
   if (self) {
     _data = data;
-    _localMutations = mutations;
     _documentState = state;
   }
   return self;
 }
 
 - (BOOL)hasLocalMutations {
-  return self.documentState === FSTDocumentStateLocalMutations;
+  return _documentState == FSTDocumentStateLocalMutations;
 }
 
 - (BOOL)hasCommittedMutations {
-  return self.documentState === FSTDocumentStateCommittedMutations;
+  return _documentState == FSTDocumentStateCommittedMutations;
 }
 
 - (BOOL)hasPendingWrites {
@@ -117,15 +122,15 @@ NS_ASSUME_NONNULL_BEGIN
   }
 
   FSTDocument *otherDoc = other;
-  return self.key == otherDoc.key && self.version == otherDoc.version && self.documentState == otherDoc.documentState &&
-         [self.data isEqual:otherDoc.data] && self.hasLocalMutations == otherDoc.hasLocalMutations;
+  return self.key == otherDoc.key && self.version == otherDoc.version && _documentState == otherDoc->_documentState &&
+         [self.data isEqual:otherDoc.data];
 }
 
 - (NSUInteger)hash {
   NSUInteger result = [self.key hash];
   result = result * 31 + self.version.Hash();
   result = result * 31 + [self.data hash];
-  result = result * 31 + self.documentState;
+  result = result * 31 + _documentState;
   return result;
 }
 
@@ -133,7 +138,7 @@ NS_ASSUME_NONNULL_BEGIN
   return [NSString stringWithFormat:@"<FSTDocument: key:%s version:%s documentState:%@ data:%@>",
                                     self.key.ToString().c_str(),
                                     self.version.timestamp().ToString().c_str(),
-                                    self.documentState, self.data];
+          (long)_documentState, self.data];
 }
 
 - (nullable FSTFieldValue *)fieldForPath:(const FieldPath &)path {
@@ -142,23 +147,22 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-@implementation FSTDeletedDocument
-
-+ (instancetype)documentWithKey:(DocumentKey)key version:(SnapshotVersion)version {
-  return [[FSTDeletedDocument alloc] initWithKey:std::move(key) version:std::move(version)];
+@implementation FSTDeletedDocument {
+  BOOL _hasCommittedMutations;
 }
 
++ (instancetype)documentWithKey:(DocumentKey)key version:(SnapshotVersion)version hasCommittedMutations:(BOOL)committedMutations  {
+  FSTDeletedDocument * deletedDocument =  [[FSTDeletedDocument alloc] initWithKey:std::move(key) version:std::move(version)];
 
-- (BOOL)hasLocalMutations {
-  return self.documentState === FSTDocumentStateLocalMutations;
-}
+  if (deletedDocument) {
+    deletedDocument->_hasCommittedMutations = committedMutations;
+  }
 
-- (BOOL)hasCommittedMutations {
-  return self.documentState === FSTDocumentStateCommittedMutations;
+  return deletedDocument;
 }
 
 - (BOOL)hasPendingWrites {
-  return self.hasLocalMutations || self.hasCommittedMutations;
+  return _hasCommittedMutations;
 }
 
 - (BOOL)isEqual:(id)other {
@@ -169,14 +173,44 @@ NS_ASSUME_NONNULL_BEGIN
     return NO;
   }
 
-  FSTDocument *otherDoc = other;
-  return self.key == otherDoc.key && self.version == otherDoc.version;
+  FSTDeletedDocument *otherDoc = other;
+  return self.key == otherDoc.key && self.version == otherDoc.version && _hasCommittedMutations == otherDoc->_hasCommittedMutations;
 }
 
 - (NSUInteger)hash {
   NSUInteger result = [self.key hash];
   result = result * 31 + self.version.Hash();
   return result;
+}
+
+@end
+
+@implementation FSTUnknownDocument
+
++ (instancetype)documentWithKey:(DocumentKey)key version:(SnapshotVersion)version {
+return [[FSTUnknownDocument alloc] initWithKey:std::move(key) version:std::move(version)];
+}
+
+- (BOOL)hasPendingWrites {
+  return YES;
+}
+
+- (BOOL)isEqual:(id)other {
+if (other == self) {
+return YES;
+}
+if (![other isKindOfClass:[FSTDeletedDocument class]]) {
+return NO;
+}
+
+FSTDocument *otherDoc = other;
+return self.key == otherDoc.key && self.version == otherDoc.version;
+}
+
+- (NSUInteger)hash {
+NSUInteger result = [self.key hash];
+result = result * 31 + self.version.Hash();
+return result;
 }
 
 @end
